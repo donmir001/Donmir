@@ -27,4 +27,3 @@ jobs:
     - name: Run Core Self-Diagnostics (main.py)
       run: |
         python main.py
-Прос
