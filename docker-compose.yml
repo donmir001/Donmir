@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  boot-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: donmir_boot_agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
+    networks:
+      - donmir-network
+
+networks:
+  donmir-network:
+    driver: bridge
