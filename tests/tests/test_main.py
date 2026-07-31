@@ -4,11 +4,11 @@ from main import (
     get_boot_message,
     get_system_info,
     load_config,
+    log_boot_event,
 )
 
 
 def test_boot_message_content():
-    """Проверка приветственного сообщения с конфигом."""
     message = get_boot_message(DEFAULT_CONFIG)
     assert APP_NAME in message
     assert "Version 0.1" in message
@@ -16,7 +16,6 @@ def test_boot_message_content():
 
 
 def test_system_info_content():
-    """Проверка вывода системных данных с конфигом."""
     info = get_system_info(DEFAULT_CONFIG)
     assert "Platform started" in info
     assert "Project: DonMir" in info
@@ -26,7 +25,21 @@ def test_system_info_content():
 
 
 def test_config_fallback_when_missing(tmp_path):
-    """Тест безопасного отката на дефолтный конфиг при отсутствии файла."""
     missing_file = tmp_path / "non_existent.json"
     config = load_config(missing_file)
     assert config == DEFAULT_CONFIG
+
+
+def test_log_boot_event(tmp_path):
+    """Тест записи события запуска в лог-файл."""
+    test_log = tmp_path / "boot.log"
+    entry = log_boot_event(
+        DEFAULT_CONFIG, status="INITIALIZED", log_file=test_log
+    )
+
+    assert test_log.exists()
+    assert "Version: 0.1" in entry
+    assert "Status: INITIALIZED" in entry
+
+    content = test_log.read_text()
+    assert entry in content
