@@ -1,0 +1,6 @@
+{
+  "project_name": "DonMir",
+  "version": "0.1",
+  "mode": "development",
+  "data_path": "./storage"
+}
