@@ -1,0 +1,14 @@
+# DonMir Boot Agent - Core Dependencies
+
+# Конфигурация и окружение (.env)
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
+# HTTP-клиент для взаимодействия по API/HTTPS
+httpx>=0.27.0
+
+# Ведение системных журналов (Логирование)
+loguru>=0.7.2
+
+# Автоматическое тестирование
+pytest>=8.0.0
