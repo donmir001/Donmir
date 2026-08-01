@@ -1,67 +1,46 @@
 import logging
-from pathlib import Path
-from core.config_manager import ConfigManager
+import time
 from core.event_bus import EventBus
-from core.plugin_manager import PluginManager
-from core.system import SystemCore
 from executor.task_runner import TaskRunner
-from memory.session_store import SessionStore
-from memory.state_manager import StateManager
+from plugins.scanner.phone_scanner import PhoneScanner
 
-
-def setup_logging():
-    """Настройка логирования работы агента."""
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-
-    logging.basicConfig(
-        filename=log_dir / "boot.log",
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        encoding="utf-8",
-    )
+# Настройка системного журналирования (Logs)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("DonMirBootAgent")
 
 
 def main():
-    setup_logging()
-    logging.info("Инициализация полной платформы DonMir Boot Agent...")
+    logger.info("=== Starting DonMir Boot Agent v0.2 ===")
 
-    # 1. Инициализация Шины Событий и Ядра
-    event_bus = EventBus()
-    config_mgr = ConfigManager()
-    sys_core = SystemCore(config_mgr, event_bus)
+    # 1. Инициализация ядра и шины событий
+    bus = EventBus()
+    runner = TaskRunner(bus)
 
-    # 2. Инициализация подсистем Памяти, Плагинов и Исполнителя
-    state_mgr = StateManager()
-    session_store = SessionStore()
-    plugin_mgr = PluginManager()
-    task_runner = TaskRunner(event_bus)
-
-    # 3. Запуск ядра
-    sys_core.initialize()
-    info = sys_core.get_system_info()
-
-    # 4. Сканирование плагинов
-    plugins = plugin_mgr.discover_plugins()
-    state_mgr.set("discovered_plugins", plugins)
-
-    # 5. Регистрация и запуск тестовой задачи
-    task_runner.register_task("ping", lambda: "pong")
-    result = task_runner.run_task("ping")
-
-    session_store.add_event("system_boot", "boot_completed", {"ping_result": result})
-
-    welcome_msg = (
-        f"Привет! Я {info['agent_name']} v{info['version']} "
-        f"на базе {info['os']} {info['os_release']} (Python {info['python_version']}). "
-        f"Платформа полностью активна!"
+    # 2. Настройка обработчиков событий (Notifiers)
+    bus.subscribe(
+        "scanner:item_found",
+        lambda item: logger.info(f"[SCANNER] Processed: {item['title']} (${item['price']})")
+    )
+    bus.subscribe(
+        "scanner:deal_detected",
+        lambda item: logger.warning(
+            f"🔥 [DEAL FOUND!] {item['title']} | Price: ${item['price']} | Market: ${item['estimated_market_price']}"
+        )
     )
 
-    print(welcome_msg)
-    logging.info(welcome_msg)
+    # 3. Инициализация и регистрация сканера
+    scanner = PhoneScanner(bus)
+    runner.register_task("scan_phones", scanner.run_scan)
 
-    # 6. Остановка ядра
-    sys_core.shutdown()
+    logger.info("DonMir Boot Agent engine initialized successfully.")
+    logger.info("Executing task: 'scan_phones' via TaskRunner...")
+
+    # 4. Запуск задачи сканирования через TaskRunner
+    results = runner.run_task("scan_phones")
+    logger.info(f"=== Scan completed. Processed items count: {len(results)} ===")
 
 
 if __name__ == "__main__":
