@@ -1,0 +1,31 @@
+import pytest
+from core.event_bus import EventBus
+from plugins.scanner.car_scanner import CarScanner
+
+
+def test_car_scanner_deals_detection():
+    """Тест автомобильного сканера: проверка отлова горячих авто-сделок через EventBus."""
+    bus = EventBus()
+    scanner = CarScanner(bus)
+
+    items_found = []
+    deals_detected = []
+
+    # Подписываемся на события сканера
+    bus.subscribe("scanner:item_found", lambda data: items_found.append(data))
+    bus.subscribe("scanner:deal_detected", lambda data: deals_detected.append(data))
+
+    # Запускаем автосканирование
+    processed = scanner.run_scan()
+
+    # 1. Проверяем, что обработано 3 машины
+    assert len(processed) == 3
+    assert len(items_found) == 3
+
+    # 2. Проверяем, что маржа >= 15% только у 2 машин (Toyota Camry и Porsche Macan)
+    assert len(deals_detected) == 2
+
+    deal_titles = [d["title"] for d in deals_detected]
+    assert "Toyota Camry 2.5 2021 (VIN: JTDKN3AU...)" in deal_titles
+    assert "Porsche Macan S 2020" in deal_titles
+    assert "BMW 3 Series 2019 (High mileage)" not in deal_titles
