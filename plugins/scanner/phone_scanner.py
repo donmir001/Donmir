@@ -16,21 +16,21 @@ class PhoneScanner(BaseScanner):
                 "id": "phone-001",
                 "title": "iPhone 13 128GB Black",
                 "price": 320.0,
-                "estimated_market_price": 450.0,  # Выгода > 15% (Сделка!)
+                "estimated_market_price": 450.0,
                 "url": "https://example.com/item/phone-001",
             },
             {
                 "id": "phone-002",
                 "title": "Samsung Galaxy S22 256GB",
                 "price": 400.0,
-                "estimated_market_price": 420.0,  # Маленькая выгода (< 15%)
+                "estimated_market_price": 420.0,
                 "url": "https://example.com/item/phone-002",
             },
             {
                 "id": "phone-003",
                 "title": "iPhone 14 Pro 256GB Gold",
                 "price": 600.0,
-                "estimated_market_price": 850.0,  # Выгода > 15% (Сделка!)
+                "estimated_market_price": 850.0,
                 "url": "https://example.com/item/phone-003",
             },
         ]
@@ -60,5 +60,5 @@ class PhoneScanner(BaseScanner):
             if item:
                 self.process_and_publish(item)
                 processed_items.append(item)
-
+        
         return processed_items
