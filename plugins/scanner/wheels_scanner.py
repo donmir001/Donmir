@@ -32,12 +32,15 @@ class WheelsScanner(BaseScanner):
             )
         
                    except: return Nonе
+    
     def run_scan(self) -> List[ListingItem]:
+        raw_items = self.fetch_items()
         processed = []
-        for raw in self.fetch_items():
+        for raw in raw_items:
             item = self.parse_item(raw)
             if item:
-                res = self.evaluator.analyze(item.price, 500.0, 40.0, 100.0, [])
+                res = self.evaluator.evaluate(item.price, 600.0, 40.0, 100.0)
+                logger.info(f"WHEELS: {item.title} -> {res['zone']}")
                 self.process_and_publish(item)
                 processed.append(item)
         return processed
