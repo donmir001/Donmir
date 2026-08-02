@@ -1,0 +1,32 @@
+import logging
+from core.architect import Architect
+
+logger = logging.getLogger("DonMir.Expansion")
+
+class ExpansionManager:
+    """Управляет процессом автоматического расширения платформы."""
+
+    def __init__(self, architect: Architect):
+        self.builder = architect
+        # Очередь чертежей (название файла: его содержимое)
+        self.blueprints = {}
+
+    def add_blueprint(self, path: str, content: str):
+        """Добавляет новый чертеж в план застройки."""
+        self.blueprints[path] = content
+
+    def execute_expansion(self):
+        """Материализует все чертежи в реальные файлы."""
+        logger.info(f"🚀 [EXPANSION] Начинаю материализацию {len(self.blueprints)} модулей...")
+        
+        results = []
+        for path, content in self.blueprints.items():
+            success = self.builder.create_module(path, content)
+            results.append(success)
+        
+        if all(results):
+            logger.info("✅ [EXPANSION] План застройки выполнен на 100%.")
+            return True
+        else:
+            logger.warning("⚠️ [EXPANSION] Часть модулей не была создана.")
+            return False
