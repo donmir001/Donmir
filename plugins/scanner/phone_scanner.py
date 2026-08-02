@@ -1,64 +1,48 @@
-from typing import Dict, Any, List, Optional
-from core.event_bus import EventBus
+import logging
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
+from core.evaluator import DealEvaluator
+from core.persuasion import PersuasionEngine
 
+logger = logging.getLogger("DonMir.SupremeScanner")
 
 class PhoneScanner(BaseScanner):
-    """Сканер объявлений по смартфонам (MVP вертикали электроники)."""
-
-    def __init__(self, bus: EventBus):
+    def __init__(self, bus):
         super().__init__(bus, name="phone_scanner")
+        self.evaluator = DealEvaluator()
+        self.psych = PersuasionEngine()
 
-    def fetch_items(self) -> List[Dict[str, Any]]:
-        """Имитация получения объявлений (демо-данные для тестов и MVP)."""
-        return [
-            {
-                "id": "phone-001",
-                "title": "iPhone 13 128GB Black",
-                "price": 320.0,
-                "estimated_market_price": 450.0,
-                "url": "https://example.com/item/phone-001",
-            },
-            {
-                "id": "phone-002",
-                "title": "Samsung Galaxy S22 256GB",
-                "price": 400.0,
-                "estimated_market_price": 420.0,
-                "url": "https://example.com/item/phone-002",
-            },
-            {
-                "id": "phone-003",
-                "title": "iPhone 14 Pro 256GB Gold",
-                "price": 600.0,
-                "estimated_market_price": 850.0,
-                "url": "https://example.com/item/phone-003",
-            },
-        ]
+    def fetch_items(self):
+        # Реальный сценарий: iPhone 15 Pro, продавец нервничает
+        return [{
+            "id": "supreme-iph-001",
+            "title": "iPhone 15 Pro Max (Срочно)",
+            "price": 1000.0,
+            "market_price": 1300.0,
+            "overheads": 40.0,
+            "defects": ["Замятие угла", "Неоригинальный кабель", "Пыль под камерой"],
+            "seller_profile": {"urgency": True, "type": "private"}
+        }]
 
-    def parse_item(self, raw_item: Dict[str, Any]) -> Optional[ListingItem]:
-        """Преобразование сырых данных в модель ListingItem."""
-        try:
-            return ListingItem(
-                id=raw_item["id"],
-                title=raw_item["title"],
-                price=float(raw_item["price"]),
-                estimated_market_price=float(raw_item["estimated_market_price"]),
-                url=raw_item["url"],
-                category="electronics/phones",
-                raw_data=raw_item,
+    def run_scan(self):
+        for raw in self.fetch_items():
+            # 1. Аналитика DonMir
+            res = self.evaluator.analyze(raw["price"], raw["market_price"], raw["overheads"], 200.0, raw["defects"])
+            
+            # 2. Оперативная Психология (KGB/Mossad)
+            intel = self.psych.get_strategy("phone", raw["defects"], raw["seller_profile"])
+            
+            report = (
+                f"\n--- ⚡️ ОПЕРАТИВНАЯ СВОДКА DonMir 100/10 ---\n"
+                f"ОБЪЕКТ: {raw['title']}\n"
+                f"СТАТУС: {res['zone']}\n"
+                f"ТОН ПЕРЕГОВОРОВ: {intel['operational_tone']}\n"
+                f"--- СХЕМЫ ВЛИЯНИЯ ---\n"
             )
-        except (KeyError, ValueError):
-            return None
-
-    def run_scan(self) -> List[ListingItem]:
-        """Запуск цикла сканирования и отправка событий в EventBus."""
-        raw_items = self.fetch_items()
-        processed_items = []
-
-        for raw in raw_items:
-            item = self.parse_item(raw)
-            if item:
-                self.process_and_publish(item)
-                processed_items.append(item)
-        
-        return processed_items
+            
+            for t in intel["tactics"]:
+                report += f"[{t['source']}] {t['method']}:\n   ➜ {t['phrase']}\n"
+            
+            report += f"\nЦЕЛЕВАЯ ЦЕНА ЗАХВАТА: {res['target_price']}$\n"
+            
+            logger.info(report)
+            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url=""))
