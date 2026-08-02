@@ -1,58 +1,76 @@
 import logging
+from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
 from core.evaluator import DealEvaluator
+from core.persuasion import PersuasionEngine
 
-logger = logging.getLogger("DonMir.GoldScanner")
+logger = logging.getLogger("DonMir.SupremeGoldScanner")
 
 class GoldScanner(BaseScanner):
-    """
-    Интеллектуальный арбитраж драгметаллов.
-    Синхронизирует цену изделия с мировой ценой лома (Spot Price).
-    """
+    """Элитный сканер DonMir уровня 100/10."""
     def __init__(self, bus):
         super().__init__(bus, name="gold_scanner")
         self.evaluator = DealEvaluator()
-        # Имитация живой котировки: цена за 1г чистого золота 999
-        self.gold_spot_price_usd = 77.50 
+        self.psych = PersuasionEngine()
+        self.gold_spot_price_usd = 77.50
 
-    def fetch_items(self):
-        # Реальный кейс: цена ниже стоимости металла — это 10/10 сделка
-        return [
-            {
-                "id": "gold-ring-585",
-                "title": "Кольцо мужское, 585 проба",
-                "weight": 12.0,
-                "purity": 0.585,
-                "price": 450.0,      # Цена продавца
-                "market_item_price": 700.0, # Цена как изделия в магазине
-                "nuances": ["Потертости", "Нужна полировка", "Нет пробы (нужна проверка)"]
-            }
-        ]
+    def fetch_items(self) -> List[Dict[str, Any]]:
+        return [{
+            "id": "gold-supreme-001",
+            "title": "Gold Ring 585",
+            "weight": 12.0, "purity": 0.585,
+            "price": 450.0, "market_item_price": 700.0,
+            "nuances": ["Scratches"],
+            "seller_profile": {"urgency": True}
+        }]
 
-    def run_scan(self):
-        for raw in self.fetch_items():
-            # Расчет стоимости чистого веса металла (цена лома)
-            melt_value = raw["weight"] * raw["purity"] * self.gold_spot_price_usd
-            
-            # Анализ через ядро DonMir
-            # Расходы: 20$ на проверку и полировку
-            res = self.evaluator.analyze(
-                price=raw["price"], 
-                market_price=melt_value, # Берем за базу цену лома (самая безопасная оценка)
-                overheads=20.0, 
-                min_profit=100.0, 
-                nuances=raw["nuances"]
+    def parse_item(self, raw_item: Dict[str, Any]) -> Optional[ListingItem]:
+        try:
+            return ListingItem(
+                id=raw_item["id"], title=raw_item["title"],
+                price=float(raw_item["price"]),
+                estimated_market_price=float(raw_item["market_item_price"]),
+                url="http://donmir.io", category="gold", raw_data=raw_item
             )
+        except: return None
 
-            report = (
-                f"\n--- 💍 ЗОЛОТОЙ АРБИТРАЖ DonMir ---\n"
-                f"Объект: {raw['title']}\n"
-                f"Вес: {raw['weight']}г | Чистый металл: {melt_value:.1f}$\n"
-                f"Зона: {res['zone']}\n"
-                f"РЕКОМЕНДАЦИЯ: {res['advice']}\n"
-                f"--- АРГУМЕНТЫ ДЛЯ ТОРГА ---\n"
-                + "\n".join(res['scripts'])
-            )
-            
-            logger.info(report)
-            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url="
+    def run_scan(self) -> List[ListingItem]:
+        raw_items = self.fetch_items()
+        processed = []
+        for raw in raw_items:
+            item = self.parse_item(raw)
+            if item:
+                melt = (
+                    raw["weight"] * raw["purity"]
+                    * self.gold_spot_price_usd
+                )
+
+                # 2. Математическая оценка Ядра
+                res = self.evaluator.analyze(
+                    item.price, melt, 30.0, 200.0, raw["nuances"]
+                )
+
+                # 3. Когнитивное доминирование (KGB/Mossad)
+                intel = self.psych.get_strategy(
+                    "gold", raw["nuances"], raw["seller_profile"]
+                )
+
+                # 4. Формирование Боевого Листа Сделки
+                report = (
+                    f"\n--- ⚡️ ЗОЛОТОЙ АРБИТРАЖ DonMir 100/10 ---\n"
+                    f"ОБЪЕКТ: {item.title}\n"
+                    f"ЗОНА: {res['zone']}\n"
+                    f"МЕТАЛЛ (ЛОМ): {melt:.1f}$ | ЦЕНА: {item.price}$\n"
+                    f"ТОРГ ДО: {res['target_price']}$\n"
+                    f"--- ОПЕРАТИВНЫЙ СКРИПТ ---\n"
+                    f"ТОН: {intel['operational_tone']}\n"
+                )
+
+                for t in intel["tactics"]:
+                    report += f"▶ [{t['source']}] {t['phrase']}\n"
+
+                logger.info(report)
+                self.process_and_publish(item)
+                processed.append(item)
+
+        return processed
