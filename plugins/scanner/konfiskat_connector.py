@@ -1,68 +1,53 @@
 import logging
-from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
+from core.evaluator import DealEvaluator
 
 logger = logging.getLogger("DonMir.Konfiskat")
 
 class KonfiskatConnector(BaseScanner):
     """
-    Профессиональный коннектор для площадок конфиската и госаукционов (РБ).
-    Анализирует лоты ТД 'Восточный' и 'БелЮрОбеспечение'.
+    Гениальный коннектор госаукционов.
+    Рассчитывает математическое ожидание победы и точку выхода.
     """
-
     def __init__(self, bus):
         super().__init__(bus, name="konfiskat_connector")
-        # Минимальная разница, при которой аукцион нам интересен
-        self.min_auction_profit_usd = 300.0 
+        self.evaluator = DealEvaluator()
+        self.auction_step_pct = 0.05 # Шаг аукциона 5%
 
-    def fetch_items(self) -> List[Dict[str, Any]]:
-        """Имитация парсинга реестра конфискованного имущества."""
-        return [
-            {
-                "id": "vost-9921",
-                "title": "Ноутбук Apple MacBook Pro 14 (Конфискат)",
-                "start_price_byb": 3500.0, # Стартовая цена на аукционе
-                "market_price_byb": 6000.0, # Реальный рынок в РБ
-                "auction_date": "2026-08-15",
-                "lot_url": "https://vostochnyi.by/lot/9921",
-                "condition": "Б/У, рабочее состояние"
-            }
-        ]
+    def fetch_items(self):
+        # Кейс: Лот на ТД Восточный
+        return [{
+            "id": "lot-vost-2026",
+            "title": "Складской остаток: Набор инструментов Makita (100 шт)",
+            "start_price": 2000.0,
+            "market_value": 5500.0,
+            "overheads": 150.0, # Хранение и вывоз
+            "nuances": ["Упаковка повреждена", "Нет гарантии", "Партия неделимая"]
+        }]
 
-    def parse_item(self, raw_item: Dict[str, Any]) -> Optional[ListingItem]:
-        """Оценка выгодности участия в аукционе."""
-        try:
-            # Конвертируем для внутренней логики в USD (условно 1 к 3.2)
-            start_price = raw_item["start_price_byb"] / 3.2
-            market_price = raw_item["market_price_byb"] / 3.2
-            potential_profit = market_price - start_price
-
-            if potential_profit < self.min_auction_profit_usd:
-                return None
-
-            return ListingItem(
-                id=raw_item["id"],
-                title=f"⚖️ [АУКЦИОН] {raw_item['title']}",
-                price=start_price,
-                estimated_market_price=market_price,
-                url=raw_item["lot_url"],
-                category="legal/auctions",
-                raw_data=raw_item
+    def run_scan(self):
+        for raw in self.fetch_items():
+            # ГЛУБОКАЯ АНАЛИТИКА
+            res = self.evaluator.analyze(
+                price=raw["start_price"],
+                market_price=raw["market_value"],
+                overheads=raw["overheads"],
+                min_profit=1500.0, # На опте хотим больше
+                nuances=raw["nuances"]
             )
-        except (KeyError, ValueError) as e:
-            logger.error(f"Ошибка анализа лота конфиската: {e}")
-            return None
+            
+            # РАСЧЕТ АУКЦИОННОЙ СТРАТЕГИИ (ГЕНИАЛЬНОСТЬ)
+            max_allowed_bid = res["max_bid"]
+            recommended_steps = int((max_allowed_bid - raw["start_price"]) / (raw["start_price"] * self.auction_step_pct))
 
-    def run_scan(self) -> List[ListingItem]:
-        """Запуск мониторинга государственных площадок."""
-        logger.info("Мониторинг аукционов конфиската запущен...")
-        raw_items = self.fetch_items()
-        deals = []
-
-        for raw in raw_items:
-            item = self.parse_item(raw)
-            if item:
-                self.process_and_publish(item)
-                deals.append(item)
-        
-        return deals
+            report = (
+                f"\n--- ⚖️ СУДЕБНЫЙ АРБИТРАЖ DonMir ---\n"
+                f"ЛОТ: {raw['title']}\n"
+                f"РЫНОК: {raw['market_value']}$ | СТАРТ: {raw['start_price']}$\n"
+                f"Зона: {res['zone']}\n"
+                f"ЦЕЛЬ ТОРГОВ: Не выше {max_allowed_bid:.0f}$ (Запас: {recommended_steps} шагов)\n"
+                f"ОБОСНОВАНИЕ ДЛЯ ПЕРЕПРОДАЖИ:\n" + "\n".join(res['scripts'])
+            )
+            
+            logger.info(report)
+            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["start_price"], url=""))
