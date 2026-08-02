@@ -1,0 +1,29 @@
+import os
+import logging
+
+logger = logging.getLogger("DonMir.Architect")
+
+class Architect:
+    """Инженерный департамент DonMir. Отвечает за расширение системы."""
+
+    def __init__(self, base_path: str = "."):
+        self.base_path = base_path
+
+    def create_module(self, path: str, content: str):
+        """Создает новый файл с кодом, обеспечивая чистоту структуры."""
+        full_path = os.path.join(self.base_path, path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        
+        try:
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(content.strip())
+            logger.info(f"🧱 [ARCHITECT] Модуль создан: {path}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ [ARCHITECT] Ошибка создания модуля {path}: {e}")
+            return False
+
+    def report_status(self):
+        """Анализирует текущую структуру и докладывает готовность к росту."""
+        # Здесь будет логика сканирования проекта на наличие дыр
+        return "READY_FOR_EXPANSION"
