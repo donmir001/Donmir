@@ -1,4 +1,3 @@
-lo
 gging
 from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
@@ -34,16 +33,12 @@ class WheelsScanner(BaseScanner):
             )
         
                    except: return Nonе
-        def run_scan(self) -> List[ListingItem]:
+          def run_scan(self) -> List[ListingItem]:
         processed = []
         for raw in self.fetch_items():
             item = self.parse_item(raw)
             if item:
-                val = (raw["tread_mm"]/8.0)*raw["tire_new_price"]*4
-                m_total = raw["rims_market"]+val
-                res = self.evaluator.analyze(item.price,m_total,40.0,150.0,raw["nuances"])
-                intel = self.psych.get_strategy("wheels",raw["nuances"],raw["seller_profile"])
-                logger.info(f"WHEELS: {res['zone']} | TARGET: {res['target_price']}$")
+                res = self.evaluator.analyze(item.price, 500.0, 40.0, 100.0, [])
                 self.process_and_publish(item)
                 processed.append(item)
         return processed
