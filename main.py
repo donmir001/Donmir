@@ -1,4 +1,4 @@
-import logging
+ort logging
 import sys
 from core.event_bus import EventBus
 from executor.task_runner import TaskRunner
@@ -24,5 +24,4 @@ def main():
 
     logger.info("--- ДИАГНОСТИКА ЗАВЕРШЕНА: СИСТЕМА СТАБИЛЬНА ---")
 
-if __name__ == "__main__":
-    main()
+if __name__ == 
