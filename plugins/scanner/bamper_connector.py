@@ -38,5 +38,3 @@ class BamperConnector(BaseScanner):
             
             report += f"\nЦЕНА ПЕРЕХВАТА: {res['target_price']}$\n"
             
-            logger.info(report)
-            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url=""))
