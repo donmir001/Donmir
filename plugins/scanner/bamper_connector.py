@@ -1,40 +1,42 @@
-from typing import Dict, Any, List
+import logging
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
+from core.evaluator import DealEvaluator
+from core.persuasion import PersuasionEngine
+
+logger = logging.getLogger("DonMir.BamperDeepSearch")
 
 class BamperConnector(BaseScanner):
-    """Коннектор для Bamper.by с глубоким поиском по ID."""
-
     def __init__(self, bus):
         super().__init__(bus, name="bamper_connector")
+        self.evaluator = DealEvaluator()
+        self.psych = PersuasionEngine()
 
-    def fetch_items(self) -> List[Dict[str, Any]]:
-        # Имитируем глубокий поиск зеркала Opel Astra H по твоему запросу
-        return [
-            {
-                "id": "162897514", # Прямой ID, а не ссылка на каталог!
-                "title": "Зеркало наружное Opel Astra H 2007",
-                "price": 23.0,
-                "market_price_avg": 45.0, # Для сравнения
-                "url": "https://bamper.by/zapchast/162897514/",
-                "phone": "+37529XXXXXXX", # Бот вытащит из карточки
-                "description": "Состояние 10/10, оригинал, склад: Минск"
-            }
-        ]
+    def fetch_items(self):
+        return [{
+            "id": "b-998877",
+            "title": "Турбина Garrett для Opel 1.7 CDTI",
+            "price": 350.0,
+            "market_price": 500.0,
+            "nuances": ["Люфт крыльчатки", "Масло в патрубке", "Нет гарантийного талона"],
+            "seller_profile": {"urgency": True}
+        }]
 
-    def run_scan(self) -> List[ListingItem]:
-        raw_items = self.fetch_items()
-        processed = []
-        for raw in raw_items:
-            # Формируем ту самую "готовую карточку" для Telegram
-            item = ListingItem(
-                id=raw["id"],
-                title=f"🔥 ЛУЧШАЯ ЦЕНА: {raw['title']}",
-                price=raw["price"],
-                estimated_market_price=raw["market_price_avg"],
-                url=raw["url"],
-                category="запчасти",
-                raw_data=raw
+    def run_scan(self):
+        for raw in self.fetch_items():
+            res = self.evaluator.analyze(raw["price"], raw["market_price"], 30.0, 100.0, raw["nuances"])
+            logic = self.psych.get_strategy("parts", raw["nuances"], raw["seller_profile"])
+
+            report = (
+                f"\n--- 🔧 DonMir DEEP SEARCH: PARTS ---\n"
+                f"ОБЪЕКТ: {raw['title']}\n"
+                f"СТАТУС: {res['zone']}\n"
+                f"ТАКТИКА: {logic['operational_tone']}\n"
+                f"--- АРГУМЕНТАЦИЯ MI6 ---\n"
             )
-            self.process_and_publish(item)
-            processed.append(item)
-        return processed
+            for t in logic["tactics"]:
+                report += f"• {t['phrase']}\n"
+            
+            report += f"\nЦЕНА ПЕРЕХВАТА: {res['target_price']}$\n"
+            
+            logger.info(report)
+            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url=""))
