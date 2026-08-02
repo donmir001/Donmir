@@ -1,71 +1,58 @@
 import logging
-from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
+from core.evaluator import DealEvaluator
 
 logger = logging.getLogger("DonMir.GoldScanner")
 
 class GoldScanner(BaseScanner):
     """
-    Интеллектуальный сканер драгметаллов.
-    Рассчитывает реальную стоимость изделия исходя из пробы, веса и биржевых котировок.
+    Интеллектуальный арбитраж драгметаллов.
+    Синхронизирует цену изделия с мировой ценой лома (Spot Price).
     """
-
     def __init__(self, bus):
         super().__init__(bus, name="gold_scanner")
-        # Устанавливаем текущую рыночную цену за 1 грамм чистого золота (пример)
-        self.spot_price_usd_per_gram = 75.0 
+        self.evaluator = DealEvaluator()
+        # Имитация живой котировки: цена за 1г чистого золота 999
+        self.gold_spot_price_usd = 77.50 
 
-    def fetch_items(self) -> List[Dict[str, Any]]:
-        """Имитация парсинга площадок (Kufar, Аукционы, Ломбарды)."""
+    def fetch_items(self):
+        # Реальный кейс: цена ниже стоимости металла — это 10/10 сделка
         return [
             {
-                "id": "gold-001",
-                "title": "Золотая цепь, 585 проба",
-                "weight": 10.5,      # Вес в граммах
-                "purity": 0.585,     # Проба
-                "price_usd": 350.0,
-                "url": "https://kufar.by/item/gold-chain-001",
-                "description": "Классическое плетение, состояние идеал"
+                "id": "gold-ring-585",
+                "title": "Кольцо мужское, 585 проба",
+                "weight": 12.0,
+                "purity": 0.585,
+                "price": 450.0,      # Цена продавца
+                "market_item_price": 700.0, # Цена как изделия в магазине
+                "nuances": ["Потертости", "Нужна полировка", "Нет пробы (нужна проверка)"]
             }
         ]
 
-    def parse_item(self, raw_item: Dict[str, Any]) -> Optional[ListingItem]:
-        """Расчет стоимости лома vs стоимости изделия."""
-        try:
-            weight = float(raw_item["weight"])
-            purity = float(raw_item["purity"])
-            asking_price = float(raw_item["price_usd"])
-
-            # Расчет чистой стоимости металла (Metal Value)
-            metal_value = weight * purity * self.spot_price_usd_per_gram
+    def run_scan(self):
+        for raw in self.fetch_items():
+            # Расчет стоимости чистого веса металла (цена лома)
+            melt_value = raw["weight"] * raw["purity"] * self.gold_spot_price_usd
             
-            # Если цена ниже стоимости чистого металла — это мгновенный сигнал (Deal!)
-            if asking_price < metal_value:
-                logger.warning(f"🔥 НАЙДЕН МЕТАЛЛ НИЖЕ БИРЖИ: {raw_item['title']}")
-            
-            return ListingItem(
-                id=raw_item["id"],
-                title=f"💍 [GOLD {int(purity*1000)}] {raw_item['title']} ({weight}g)",
-                price=asking_price,
-                estimated_market_price=metal_value * 1.2, # Рыночная цена изделия обычно на 20% выше лома
-                url=raw_item["url"],
-                category="luxury/gold",
-                raw_data=raw_item
+            # Анализ через ядро DonMir
+            # Расходы: 20$ на проверку и полировку
+            res = self.evaluator.analyze(
+                price=raw["price"], 
+                market_price=melt_value, # Берем за базу цену лома (самая безопасная оценка)
+                overheads=20.0, 
+                min_profit=100.0, 
+                nuances=raw["nuances"]
             )
-        except (KeyError, ValueError) as e:
-            logger.error(f"Ошибка анализа золота: {e}")
-            return None
 
-    def run_scan(self) -> List[ListingItem]:
-        """Запуск глубокого анализа рынка драгметаллов."""
-        logger.info("Запуск сканера драгметаллов...")
-        raw_items = self.fetch_items()
-        deals = []
-
-        for raw in raw_items:
-            item = self.parse_item(raw)
-            if item:
-                self.process_and_publish(item)
-                deals.append(item)
-        
-        return deals
+            report = (
+                f"\n--- 💍 ЗОЛОТОЙ АРБИТРАЖ DonMir ---\n"
+                f"Объект: {raw['title']}\n"
+                f"Вес: {raw['weight']}г | Чистый металл: {melt_value:.1f}$\n"
+                f"Зона: {res['zone']}\n"
+                f"РЕКОМЕНДАЦИЯ: {res['advice']}\n"
+                f"--- АРГУМЕНТЫ ДЛЯ ТОРГА ---\n"
+                + "\n".join(res['scripts'])
+            )
+            
+            logger.info(report)
+            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url=""))
