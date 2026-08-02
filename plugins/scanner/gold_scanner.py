@@ -55,4 +55,4 @@ class GoldScanner(BaseScanner):
             )
             
             logger.info(report)
-            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url=""))
+            self.process_and_publish(ListingItem(id=raw["id"], title=raw["title"], price=raw["price"], url="
