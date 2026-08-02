@@ -33,7 +33,7 @@ class WheelsScanner(BaseScanner):
             )
         
                    except: return Nonе
-          def run_scan(self) -> List[ListingItem]:
+    def run_scan(self) -> List[ListingItem]:
         processed = []
         for raw in self.fetch_items():
             item = self.parse_item(raw)
