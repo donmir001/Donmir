@@ -1,4 +1,4 @@
-gging
+
 from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
 from core.evaluator import DealEvaluator
