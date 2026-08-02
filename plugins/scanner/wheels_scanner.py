@@ -1,4 +1,5 @@
-import logging
+lo
+gging
 from typing import Dict, Any, List, Optional
 from plugins.scanner.base_scanner import BaseScanner, ListingItem
 from core.evaluator import DealEvaluator
@@ -32,31 +33,17 @@ class WheelsScanner(BaseScanner):
                 url="http://donmir.io", category="wheels", raw_data=raw_item
             )
         
-                   except: return Non
+                   except: return Nonе
         def run_scan(self) -> List[ListingItem]:
-
-"""Запуск цикла сканирования с анализом износа протектора."""
-    raw_items = self.fetch_items()
         processed = []
-        for raw in raw_items:
+        for raw in self.fetch_items():
             item = self.parse_item(raw)
             if item:
-                # 1. Математика износа (DonMir Tread Model)
-                tires_val = (raw["tread_mm"] / 8.0) * raw["tire_new_price"] * 4
-                market_total = raw["rims_market"] + tires_val
-                
-                # 2. Аналитика Ядра (overheads 40$ на логистику)
-                res = self.evaluator.analyze(
-                    item.price, market_total, 40.0, 150.0, raw["nuances"]
-                )
-                
-                # 3. Психология спецслужб (MI6/KGB)
-                intel = self.psych.get_strategy("wheels", raw["nuances"], raw["seller_profile"])
-                
-                # 4. Вывод оперативной сводки
-                logger.info(f"\n--- 🛞 DonMir WHEELS 100/10 ---\nОБЪЕКТ: {item.title}\nЗОНА: {res['zone']}\nТОРГ ДО: {res['target_price']}$\nСКРИПТ: {intel['tactics'][0]['phrase']}")
-                
+                val = (raw["tread_mm"]/8.0)*raw["tire_new_price"]*4
+                m_total = raw["rims_market"]+val
+                res = self.evaluator.analyze(item.price,m_total,40.0,150.0,raw["nuances"])
+                intel = self.psych.get_strategy("wheels",raw["nuances"],raw["seller_profile"])
+                logger.info(f"WHEELS: {res['zone']} | TARGET: {res['target_price']}$")
                 self.process_and_publish(item)
                 processed.append(item)
         return processed
-
